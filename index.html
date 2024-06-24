@@ -28,14 +28,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <script>
-    let token = '';
-    const socket = new WebSocket('ws://localhost:3000');
-
-    socket.onmessage = (event) => {
-      const position = JSON.parse(event.data);
-      updateBallPosition(position.x, position.y, position.z);
-    };
-
     function login() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
@@ -47,21 +39,47 @@
         },
         body: JSON.stringify({ username, password })
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to login');
+        }
+        return response.json();
+      })
       .then(data => {
-        token = data.token;
+        const token = data.token;
+
+        // Store the token for future requests
+        localStorage.setItem('token', token);
+
+        // Hide login form and show dashboard
         document.getElementById('login-form').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
-        init3D();
+
+        // Initialize WebSocket connection
+        initializeWebSocket(token);
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error('Login error:', err);
+      });
     }
 
-    function submitPosition(event) {
+    function initializeWebSocket(token) {
+      const socket = io('http://localhost:3000', {
+        query: { token }
+      });
+
+      socket.on('position', (position) => {
+        console.log('Received position:', position);
+        // Update the 3D graph with the new position
+      });
+    }
+
+    document.getElementById('position-form').addEventListener('submit', (event) => {
       event.preventDefault();
       const x = document.getElementById('x').value;
       const y = document.getElementById('y').value;
       const z = document.getElementById('z').value;
+      const token = localStorage.getItem('token');
 
       fetch('http://localhost:3000/api/position', {
         method: 'POST',
@@ -70,40 +88,20 @@
           'x-access-token': token
         },
         body: JSON.stringify({ x, y, z })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to submit position');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Position submitted:', data);
+      })
+      .catch(err => {
+        console.error('Submit position error:', err);
       });
-    }
-
-    document.getElementById('position-form').addEventListener('submit', submitPosition);
-
-    let scene, camera, renderer, ball;
-
-    function init3D() {
-      const container = document.getElementById('canvas-container');
-
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-      renderer = new THREE.WebGLRenderer();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-      container.appendChild(renderer.domElement);
-
-      const geometry = new THREE.SphereGeometry(1, 32, 32);
-      const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-      ball = new THREE.Mesh(geometry, material);
-      scene.add(ball);
-
-      camera.position.z = 5;
-
-      animate();
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
-
-    function updateBallPosition(x, y, z) {
-      ball.position.set(x, y, z);
-    }
+    });
   </script>
 </body>
 </html>

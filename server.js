@@ -5,9 +5,12 @@ const bcrypt = require('bcryptjs');
 const mysql = require('mysql2');
 const http = require('http');
 const WebSocket = require('ws');
+const cors = require('cors');
 
 const app = express();
+app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json());
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -25,6 +28,19 @@ db.connect((err) => {
 
 const SECRET_KEY = 'your_jwt_secret_key';
 
+// JWT verification middleware
+const verifyJWT = (req, res, next) => {
+  const token = req.headers['x-access-token'];
+  if (!token) return res.sendStatus(403);
+
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) return res.sendStatus(403);
+    req.userId = decoded.id;
+    next();
+  });
+};
+
+// Register route
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 8);
@@ -34,6 +50,7 @@ app.post('/api/register', async (req, res) => {
   });
 });
 
+// Login route
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   db.query('SELECT * FROM users WHERE username = ?', [username], async (err, results) => {
@@ -47,17 +64,7 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
-const verifyJWT = (req, res, next) => {
-  const token = req.headers['x-access-token'];
-  if (!token) return res.sendStatus(403);
-
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) return res.sendStatus(403);
-    req.userId = decoded.id;
-    next();
-  });
-};
-
+// Position route
 app.post('/api/position', verifyJWT, (req, res) => {
   const { x, y, z } = req.body;
   db.query('INSERT INTO positions (x, y, z) VALUES (?, ?, ?)', [x, y, z], (err, result) => {
@@ -67,6 +74,7 @@ app.post('/api/position', verifyJWT, (req, res) => {
   });
 });
 
+// WebSocket server broadcast function
 const broadcastPosition = (position) => {
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
