@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ball Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    #canvas-container { width: 100%; height: 500px; }
+  </style>
+</head>
+<body>
+  <div id="login-form">
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+  </div>
+  <div id="dashboard" style="display: none;">
+    <div id="canvas-container"></div>
+    <form id="position-form">
+      <input type="number" id="x" placeholder="X">
+      <input type="number" id="y" placeholder="Y">
+      <input type="number" id="z" placeholder="Z">
+      <button type="submit">Submit Position</button>
+    </form>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <script>
+    let token = '';
+    const socket = new WebSocket('ws://localhost:3000');
+
+    socket.onmessage = (event) => {
+      const position = JSON.parse(event.data);
+      updateBallPosition(position.x, position.y, position.z);
+    };
+
+    function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      })
+      .then(response => response.json())
+      .then(data => {
+        token = data.token;
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        init3D();
+      })
+      .catch(err => console.error(err));
+    }
+
+    function submitPosition(event) {
+      event.preventDefault();
+      const x = document.getElementById('x').value;
+      const y = document.getElementById('y').value;
+      const z = document.getElementById('z').value;
+
+      fetch('http://localhost:3000/api/position', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-token': token
+        },
+        body: JSON.stringify({ x, y, z })
+      });
+    }
+
+    document.getElementById('position-form').addEventListener('submit', submitPosition);
+
+    let scene, camera, renderer, ball;
+
+    function init3D() {
+      const container = document.getElementById('canvas-container');
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
+
+      const geometry = new THREE.SphereGeometry(1, 32, 32);
+      const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      ball = new THREE.Mesh(geometry, material);
+      scene.add(ball);
+
+      camera.position.z = 5;
+
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    function updateBallPosition(x, y, z) {
+      ball.position.set(x, y, z);
+    }
+  </script>
+</body>
+</html>
