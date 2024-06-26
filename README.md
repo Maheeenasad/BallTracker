@@ -11,7 +11,7 @@ This is a single-page web application (SPA) that provides an API for tracking th
 - WebSockets for real-time updates.
 
 ## Steps To run the Program
-1- Set Up MySQL Database:
+### 1. Set Up MySQL Database:
 
 - Open XAMPP and start the MySQL service.
 - Open phpMyAdmin (usually accessible at http://localhost/phpmyadmin).
@@ -32,7 +32,7 @@ CREATE TABLE `positions` (
   `z` float NOT NULL,
   PRIMARY KEY (`id`)
 );
-2- Set Up the Node.js Server:
+### 2. Set Up the Node.js Server:
 
 - Open a terminal or command prompt.
 - Navigate to the directory where you want to keep your project.
@@ -41,20 +41,20 @@ npm init -y
 - Install the necessary dependencies:
 npm install express body-parser jwt bcryptjs mysql2 ws cors
 - Create a file named server.js and paste the provided server code into it.
-3- Set Up the Frontend:
+### 3. Set Up the Frontend:
 
 - Create an index.html file in the same directory and paste the provided HTML and JavaScript code into it.
-4- Run the Server:
+### 4. Run the Server:
 
 - In the terminal, navigate to the project directory (if not already there).
 - Start the server by running:
 node server.js
 - Ensure the server is running and listening on port 3000.
-5- Open the Frontend:
+### 5. Open the Frontend:
 
 - Open a web browser.
 - Navigate to the location where you have saved index.html (e.g., you can open it directly from your file system by double-clicking the file or dragging it into the browser).
-6- Test the Application:
+### 6. Test the Application:
 
 - Register a new user using Postman or any API testing tool by making a POST request to http://localhost:3000/api/register with a JSON body containing username and password.
 {
